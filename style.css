@@ -1,0 +1,100 @@
+body {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background: linear-gradient(to bottom, #fef6f0, #fdf1e5);
+    color: #333;
+  }
+  
+  header {
+    text-align: center;
+    padding: 3rem 1rem 1rem;
+  }
+  
+  header h1 {
+    font-size: 2.5rem;
+    color: #a85a2f;
+    margin-bottom: 0.5rem;
+  }
+  
+  .start-button {
+    display: block;
+    margin: 1rem auto;
+    background-color: #c47451;
+    color: white;
+    border: none;
+    padding: 0.75rem 2rem;
+    font-size: 1rem;
+    border-radius: 25px;
+    cursor: pointer;
+  }
+  
+  .form-container {
+    background: white;
+    padding: 2rem;
+    border-radius: 20px;
+    width: 90%;
+    max-width: 400px;
+    margin: 2rem auto;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+  }
+  
+  .form-container label {
+    display: block;
+    text-align: left;
+    margin-bottom: 0.25rem;
+    font-weight: bold;
+    color: #333;
+  }
+  
+  .form-container input,
+  .form-container select {
+    width: 100%;
+    padding: 0.5rem;
+    margin-bottom: 1rem;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+  }
+  
+  .photo-upload {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+  }
+  
+  .photo-upload .photo-box {
+    width: 20%;
+    aspect-ratio: 1;
+    border: 2px dashed #ccc;
+    border-radius: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.5rem;
+    color: #aaa;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  
+  .photo-upload .photo-box:hover {
+    background-color: #f0eae4;
+  }
+  
+  .preview-button {
+    background: #2c2b40;
+    color: white;
+    border: none;
+    width: 100%;
+    padding: 0.75rem;
+    border-radius: 25px;
+    font-size: 1rem;
+    cursor: pointer;
+  }
+  
+  footer {
+    text-align: center;
+    padding: 2rem 1rem 4rem;
+    font-size: 0.9rem;
+    color: #a78b7b;
+  }
+  
