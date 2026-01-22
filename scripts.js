@@ -141,6 +141,34 @@ document.addEventListener("DOMContentLoaded", () => {
     setStatus(`Generating ${selected.length} image(s)…`);
 
     try {
+      function renderImages(images) {
+        images.forEach((img) => {
+          const card = document.createElement("div");
+          card.className = "generated-preview-card";
+
+          if (img?.b64_png) {
+            const imageEl = document.createElement("img");
+            imageEl.src = `data:image/png;base64,${img.b64_png}`;
+            imageEl.alt = img.filename || "Generated image";
+            card.appendChild(imageEl);
+          } else {
+            const errorEl = document.createElement("div");
+            errorEl.className = "generated-preview-label";
+            errorEl.textContent = img?.error
+              ? `Error: ${img.error}`
+              : "Error: image generation failed";
+            card.appendChild(errorEl);
+          }
+
+          const label = document.createElement("div");
+          label.className = "generated-preview-label";
+          label.textContent = img?.filename || "photo";
+          card.appendChild(label);
+
+          gridEl?.appendChild(card);
+        });
+      }
+
       const formData = new FormData();
       formData.append("style", style);
       formData.append("childName", childName);
@@ -160,6 +188,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const data = await response.json().catch(() => null);
       if (!response.ok) {
+        const images = Array.isArray(data?.images) ? data.images : [];
+        if (images.length > 0) {
+          setStatus(data?.error || `Request failed (${response.status})`, { error: true });
+          renderImages(images);
+          return;
+        }
         throw new Error(data?.error || `Request failed (${response.status})`);
       }
 
@@ -171,29 +205,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const successes = images.filter((img) => img && img.b64_png).length;
       setStatus(`Generated ${successes} / ${images.length} image(s).`);
 
-      images.forEach((img) => {
-        const card = document.createElement("div");
-        card.className = "generated-preview-card";
-
-        if (img?.b64_png) {
-          const imageEl = document.createElement("img");
-          imageEl.src = `data:image/png;base64,${img.b64_png}`;
-          imageEl.alt = img.filename || "Generated image";
-          card.appendChild(imageEl);
-        } else {
-          const errorEl = document.createElement("div");
-          errorEl.className = "generated-preview-label";
-          errorEl.textContent = img?.error ? `Error: ${img.error}` : "Error: image generation failed";
-          card.appendChild(errorEl);
-        }
-
-        const label = document.createElement("div");
-        label.className = "generated-preview-label";
-        label.textContent = img?.filename || "photo";
-        card.appendChild(label);
-
-        gridEl?.appendChild(card);
-      });
+      renderImages(images);
     } catch (err) {
       setStatus(err?.message || "Something went wrong.", { error: true });
     } finally {
