@@ -5,7 +5,7 @@ const OPENAI_IMAGES_EDITS_URL = "https://api.openai.com/v1/images/edits";
 const STYLE_PRESETS = {
   Watercolor: "soft watercolor, pastel palette, gentle brushstrokes",
   "Studio Ghibli Style":
-    "whimsical hand-painted animation look, warm lighting, detailed backgrounds, cozy mood",
+    "whimsical hand-painted animation film look, soft shading, gentle outlines, detailed natural backgrounds, neutral white balance, balanced lighting",
   "Classic 90s Kids Book":
     "classic 1990s children's picture book illustration, simple shapes, warm colors",
   "Crayon Doodle": "playful crayon doodle on textured paper, childlike linework",
@@ -130,7 +130,9 @@ function buildPrompt({ style, childName, lang }) {
   return [
     `Convert this photo into a children's book illustration in a ${stylePreset} style.`,
     "Preserve faces and key features of subjects.",
-    "Keep the scene warm, wholesome, and family-friendly.",
+    "Keep the scene wholesome, family-friendly, and uplifting.",
+    "Preserve the original color palette and lighting; avoid strong color casts (e.g., overly orange/sepia).",
+    "Keep skin tones natural and realistic.",
     childLine,
     languageLine,
     "Do not add extra characters or distort identity.",

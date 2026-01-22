@@ -187,6 +187,7 @@ document.addEventListener("DOMContentLoaded", () => {
       let processed = 0;
       let successes = 0;
       let failures = 0;
+      let timedOut = 0;
 
       for (const batch of chunkArray(selected, batchSize)) {
         const formData = new FormData();
@@ -230,8 +231,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const images = Array.isArray(data?.images) ? data.images : [];
         if (images.length > 0) {
-          const batchSuccesses = images.filter((img) => img && img.b64_png).length;
-          const batchFailures = images.filter((img) => img && !img.b64_png).length;
+          const batchSuccesses = images.filter((img) => img && (img.b64_png || img.url)).length;
+          const batchFailures = images.filter((img) => img && !(img.b64_png || img.url)).length;
           successes += batchSuccesses;
           failures += batchFailures;
           renderImages(images);
@@ -251,20 +252,14 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
         if (response.status === 504) {
-          break;
+          timedOut += batch.length;
         }
       }
 
-      if (processed < total) {
-        setStatus(
-          `Stopped early after ${processed} / ${total}. The last request timed out (504). Try again or generate fewer photos.`,
-          { error: true }
-        );
-      } else {
-        setStatus(`Generated ${successes} / ${processed} (errors: ${failures}).`, {
-          error: failures > 0,
-        });
-      }
+      const timeoutNote = timedOut > 0 ? ` (timeouts: ${timedOut})` : "";
+      setStatus(`Done: ${successes} / ${processed} generated${timeoutNote}.`, {
+        error: failures > 0,
+      });
     } catch (err) {
       setStatus(err?.message || "Something went wrong.", { error: true });
     } finally {
