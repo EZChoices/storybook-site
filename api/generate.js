@@ -141,13 +141,11 @@ async function openAiImageEdit({ imageBuffer, filename, mimeType, prompt }) {
 
   const model = process.env.OPENAI_IMAGE_MODEL || "gpt-image-1";
   const size = process.env.OPENAI_IMAGE_SIZE || "1024x1024";
-  const responseFormat = "b64_json";
 
   const formData = new FormData();
   formData.append("model", model);
   formData.append("prompt", prompt);
   formData.append("size", size);
-  formData.append("response_format", responseFormat);
   formData.append("n", "1");
 
   const blob = new Blob([imageBuffer], { type: mimeType || "application/octet-stream" });
