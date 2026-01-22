@@ -169,43 +169,97 @@ document.addEventListener("DOMContentLoaded", () => {
         });
       }
 
-      const formData = new FormData();
-      formData.append("style", style);
-      formData.append("childName", childName);
-      formData.append("lang", lang);
-
-      for (const { dataUrl, index } of selected) {
-        const blob = await dataUrlToBlob(dataUrl);
-        const ext = extensionFromMime(blob.type);
-        const filename = `photo_${index + 1}.${ext}`;
-        formData.append("photos", blob, filename);
+      function chunkArray(items, size) {
+        const chunks = [];
+        for (let i = 0; i < items.length; i += size) {
+          chunks.push(items.slice(i, i + size));
+        }
+        return chunks;
       }
 
-      const response = await fetch("/api/generate", {
-        method: "POST",
-        body: formData,
-      });
+      const total = selected.length;
+      const batchSize = 1;
+      let processed = 0;
+      let successes = 0;
+      let failures = 0;
 
-      const data = await response.json().catch(() => null);
-      if (!response.ok) {
+      for (const batch of chunkArray(selected, batchSize)) {
+        const formData = new FormData();
+        formData.append("style", style);
+        formData.append("childName", childName);
+        formData.append("lang", lang);
+
+        const filenames = [];
+        for (const { dataUrl, index } of batch) {
+          const blob = await dataUrlToBlob(dataUrl);
+          const ext = extensionFromMime(blob.type);
+          const filename = `photo_${index + 1}.${ext}`;
+          filenames.push(filename);
+          formData.append("photos", blob, filename);
+        }
+
+        setStatus(`Generating ${processed + batch.length} / ${total}…`);
+
+        let response;
+        let data = null;
+        try {
+          response = await fetch("/api/generate", {
+            method: "POST",
+            body: formData,
+          });
+          data = await response.json().catch(() => null);
+        } catch (err) {
+          failures += filenames.length;
+          renderImages(
+            filenames.map((filename) => ({
+              filename,
+              error: err?.message || "Request failed",
+            }))
+          );
+          processed += batch.length;
+          setStatus(`Generated ${successes} / ${processed} (errors: ${failures}).`, {
+            error: true,
+          });
+          continue;
+        }
+
         const images = Array.isArray(data?.images) ? data.images : [];
         if (images.length > 0) {
-          setStatus(data?.error || `Request failed (${response.status})`, { error: true });
+          const batchSuccesses = images.filter((img) => img && img.b64_png).length;
+          const batchFailures = images.filter((img) => img && !img.b64_png).length;
+          successes += batchSuccesses;
+          failures += batchFailures;
           renderImages(images);
-          return;
+        } else {
+          failures += filenames.length;
+          renderImages(
+            filenames.map((filename) => ({
+              filename,
+              error: data?.error || `Request failed (${response.status})`,
+            }))
+          );
         }
-        throw new Error(data?.error || `Request failed (${response.status})`);
+
+        processed += batch.length;
+        setStatus(`Generated ${successes} / ${processed} (errors: ${failures}).`, {
+          error: failures > 0,
+        });
+
+        if (response.status === 504) {
+          break;
+        }
       }
 
-      const images = Array.isArray(data?.images) ? data.images : [];
-      if (images.length === 0) {
-        throw new Error("No images returned from the server.");
+      if (processed < total) {
+        setStatus(
+          `Stopped early after ${processed} / ${total}. The last request timed out (504). Try again or generate fewer photos.`,
+          { error: true }
+        );
+      } else {
+        setStatus(`Generated ${successes} / ${processed} (errors: ${failures}).`, {
+          error: failures > 0,
+        });
       }
-
-      const successes = images.filter((img) => img && img.b64_png).length;
-      setStatus(`Generated ${successes} / ${images.length} image(s).`);
-
-      renderImages(images);
     } catch (err) {
       setStatus(err?.message || "Something went wrong.", { error: true });
     } finally {

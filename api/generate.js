@@ -149,7 +149,7 @@ async function openAiImageEdit({ imageBuffer, filename, mimeType, prompt }) {
   }
 
   const model = process.env.OPENAI_IMAGE_MODEL || "gpt-image-1";
-  const size = process.env.OPENAI_IMAGE_SIZE || "1024x1024";
+  const size = process.env.OPENAI_IMAGE_SIZE || "512x512";
 
   const formData = new FormData();
   formData.append("model", model);

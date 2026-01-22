@@ -8,7 +8,7 @@ Set these in Vercel (Project Settings -> Environment Variables) or locally (your
 
 - `OPENAI_API_KEY` (required)
 - `OPENAI_IMAGE_MODEL` (optional, default: `gpt-image-1`)
-- `OPENAI_IMAGE_SIZE` (optional, default: `1024x1024`)
+- `OPENAI_IMAGE_SIZE` (optional, default: `512x512`)
 - `OPENAI_IMAGE_CONCURRENCY` (optional, default: `2`)
 
 ## Local dev
