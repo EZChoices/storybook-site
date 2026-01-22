@@ -113,6 +113,15 @@ async function safeReadJson(response) {
   }
 }
 
+async function fetchUrlAsBase64(url) {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch image URL (${response.status})`);
+  }
+  const arrayBuffer = await response.arrayBuffer();
+  return Buffer.from(arrayBuffer).toString("base64");
+}
+
 function buildPrompt({ style, childName, lang }) {
   const stylePreset = STYLE_PRESETS[style] || style;
   const languageLine = lang
@@ -174,7 +183,11 @@ async function openAiImageEdit({ imageBuffer, filename, mimeType, prompt }) {
     data?.data?.[0]?.b64 ||
     null;
   if (!b64) {
-    throw new Error("OpenAI response missing base64 image data");
+    const url = data?.data?.[0]?.url;
+    if (typeof url === "string" && url.length > 0) {
+      return await fetchUrlAsBase64(url);
+    }
+    throw new Error("OpenAI response missing image data");
   }
 
   return b64;
