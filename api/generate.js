@@ -159,7 +159,7 @@ async function openAiImageEdit({ imageBuffer, filename, mimeType, prompt }) {
   const blob = new Blob([imageBuffer], { type: mimeType || "application/octet-stream" });
   formData.append("image", blob, filename || "photo");
 
-  const timeoutMs = Number(process.env.OPENAI_REQUEST_TIMEOUT_MS || 55000);
+  const timeoutMs = Number(process.env.OPENAI_REQUEST_TIMEOUT_MS || 58000);
   const signal =
     typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function"
       ? AbortSignal.timeout(timeoutMs)
