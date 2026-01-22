@@ -159,11 +159,18 @@ async function openAiImageEdit({ imageBuffer, filename, mimeType, prompt }) {
   const blob = new Blob([imageBuffer], { type: mimeType || "application/octet-stream" });
   formData.append("image", blob, filename || "photo");
 
-  const timeoutMs = Number(process.env.OPENAI_REQUEST_TIMEOUT_MS || 58000);
-  const signal =
-    typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function"
-      ? AbortSignal.timeout(timeoutMs)
-      : undefined;
+  let signal;
+  const timeoutMsRaw = process.env.OPENAI_REQUEST_TIMEOUT_MS;
+  if (
+    timeoutMsRaw &&
+    typeof AbortSignal !== "undefined" &&
+    typeof AbortSignal.timeout === "function"
+  ) {
+    const timeoutMs = Number(timeoutMsRaw);
+    if (Number.isFinite(timeoutMs) && timeoutMs > 0) {
+      signal = AbortSignal.timeout(timeoutMs);
+    }
+  }
 
   const response = await fetch(OPENAI_IMAGES_EDITS_URL, {
     method: "POST",

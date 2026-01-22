@@ -10,7 +10,7 @@ Set these in Vercel (Project Settings -> Environment Variables) or locally (your
 - `OPENAI_IMAGE_MODEL` (optional, default: `gpt-image-1`)
 - `OPENAI_IMAGE_SIZE` (optional, default: `1024x1024`; supported: `1024x1024`, `1024x1536`, `1536x1024`, `auto`)
 - `OPENAI_IMAGE_CONCURRENCY` (optional, default: `2`)
-- `OPENAI_REQUEST_TIMEOUT_MS` (optional, default: `58000`)
+- `OPENAI_REQUEST_TIMEOUT_MS` (optional, default: unset/no client timeout; on Vercel the function timeout still applies)
 
 ## Local dev
 
