@@ -13,6 +13,13 @@ const STYLE_PRESETS = {
   "Vintage Storybook": "vintage storybook illustration, muted colors, slight ink outlines",
 };
 
+const SUPPORTED_IMAGE_SIZES = new Set([
+  "1024x1024",
+  "1024x1536",
+  "1536x1024",
+  "auto",
+]);
+
 function setCors(res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -149,7 +156,8 @@ async function openAiImageEdit({ imageBuffer, filename, mimeType, prompt }) {
   }
 
   const model = process.env.OPENAI_IMAGE_MODEL || "gpt-image-1";
-  const size = process.env.OPENAI_IMAGE_SIZE || "512x512";
+  const requestedSize = String(process.env.OPENAI_IMAGE_SIZE || "auto").trim();
+  const size = SUPPORTED_IMAGE_SIZES.has(requestedSize) ? requestedSize : "auto";
 
   const formData = new FormData();
   formData.append("model", model);
