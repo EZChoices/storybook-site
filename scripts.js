@@ -151,6 +151,11 @@ document.addEventListener("DOMContentLoaded", () => {
             imageEl.src = `data:image/png;base64,${img.b64_png}`;
             imageEl.alt = img.filename || "Generated image";
             card.appendChild(imageEl);
+          } else if (img?.url) {
+            const imageEl = document.createElement("img");
+            imageEl.src = img.url;
+            imageEl.alt = img.filename || "Generated image";
+            card.appendChild(imageEl);
           } else {
             const errorEl = document.createElement("div");
             errorEl.className = "generated-preview-label";

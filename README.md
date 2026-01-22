@@ -8,8 +8,9 @@ Set these in Vercel (Project Settings -> Environment Variables) or locally (your
 
 - `OPENAI_API_KEY` (required)
 - `OPENAI_IMAGE_MODEL` (optional, default: `gpt-image-1`)
-- `OPENAI_IMAGE_SIZE` (optional, default: `auto`; supported: `1024x1024`, `1024x1536`, `1536x1024`, `auto`)
+- `OPENAI_IMAGE_SIZE` (optional, default: `1024x1024`; supported: `1024x1024`, `1024x1536`, `1536x1024`, `auto`)
 - `OPENAI_IMAGE_CONCURRENCY` (optional, default: `2`)
+- `OPENAI_REQUEST_TIMEOUT_MS` (optional, default: `55000`)
 
 ## Local dev
 
@@ -36,7 +37,7 @@ Response:
 ```json
 {
   "images": [
-    { "filename": "photo_1.jpg", "b64_png": "..." }
+    { "filename": "photo_1.jpg", "b64_png": "...", "url": "https://..." }
   ]
 }
 ```

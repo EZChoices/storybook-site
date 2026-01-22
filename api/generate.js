@@ -120,15 +120,6 @@ async function safeReadJson(response) {
   }
 }
 
-async function fetchUrlAsBase64(url) {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`Failed to fetch image URL (${response.status})`);
-  }
-  const arrayBuffer = await response.arrayBuffer();
-  return Buffer.from(arrayBuffer).toString("base64");
-}
-
 function buildPrompt({ style, childName, lang }) {
   const stylePreset = STYLE_PRESETS[style] || style;
   const languageLine = lang
@@ -156,7 +147,7 @@ async function openAiImageEdit({ imageBuffer, filename, mimeType, prompt }) {
   }
 
   const model = process.env.OPENAI_IMAGE_MODEL || "gpt-image-1";
-  const requestedSize = String(process.env.OPENAI_IMAGE_SIZE || "auto").trim();
+  const requestedSize = String(process.env.OPENAI_IMAGE_SIZE || "1024x1024").trim();
   const size = SUPPORTED_IMAGE_SIZES.has(requestedSize) ? requestedSize : "auto";
 
   const formData = new FormData();
@@ -168,12 +159,19 @@ async function openAiImageEdit({ imageBuffer, filename, mimeType, prompt }) {
   const blob = new Blob([imageBuffer], { type: mimeType || "application/octet-stream" });
   formData.append("image", blob, filename || "photo");
 
+  const timeoutMs = Number(process.env.OPENAI_REQUEST_TIMEOUT_MS || 55000);
+  const signal =
+    typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function"
+      ? AbortSignal.timeout(timeoutMs)
+      : undefined;
+
   const response = await fetch(OPENAI_IMAGES_EDITS_URL, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
     },
     body: formData,
+    signal,
   });
 
   const data = await safeReadJson(response);
@@ -190,15 +188,12 @@ async function openAiImageEdit({ imageBuffer, filename, mimeType, prompt }) {
     data?.data?.[0]?.b64_png ||
     data?.data?.[0]?.b64 ||
     null;
-  if (!b64) {
-    const url = data?.data?.[0]?.url;
-    if (typeof url === "string" && url.length > 0) {
-      return await fetchUrlAsBase64(url);
-    }
+  const url = data?.data?.[0]?.url || null;
+  if (!b64 && !url) {
     throw new Error("OpenAI response missing image data");
   }
 
-  return b64;
+  return { b64_png: b64, url };
 }
 
 async function mapWithConcurrency(items, concurrency, mapper) {
@@ -269,19 +264,19 @@ module.exports = async function handler(req, res) {
   const images = await mapWithConcurrency(photoFiles, concurrency, async (file) => {
     const filename = file.filename || "photo";
     try {
-      const b64_png = await openAiImageEdit({
+      const result = await openAiImageEdit({
         imageBuffer: file.buffer,
         filename,
         mimeType: file.mimeType,
         prompt,
       });
-      return { filename, b64_png };
+      return { filename, ...result };
     } catch (err) {
       return { filename, error: err?.message || "Image generation failed" };
     }
   });
 
-  const successCount = images.filter((img) => img && img.b64_png).length;
+  const successCount = images.filter((img) => img && (img.b64_png || img.url)).length;
   if (successCount === 0) {
     json(res, 502, { error: "All image generations failed", images });
     return;
