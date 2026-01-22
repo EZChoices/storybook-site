@@ -2,6 +2,17 @@ const Busboy = require("busboy");
 
 const OPENAI_IMAGES_EDITS_URL = "https://api.openai.com/v1/images/edits";
 
+const STYLE_PRESETS = {
+  Watercolor: "soft watercolor, pastel palette, gentle brushstrokes",
+  "Studio Ghibli Style":
+    "whimsical hand-painted animation look, warm lighting, detailed backgrounds, cozy mood",
+  "Classic 90s Kids Book":
+    "classic 1990s children's picture book illustration, simple shapes, warm colors",
+  "Crayon Doodle": "playful crayon doodle on textured paper, childlike linework",
+  "Hand-painted Look": "hand-painted gouache illustration, rich texture, warm tones",
+  "Vintage Storybook": "vintage storybook illustration, muted colors, slight ink outlines",
+};
+
 function setCors(res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -103,18 +114,20 @@ async function safeReadJson(response) {
 }
 
 function buildPrompt({ style, childName, lang }) {
+  const stylePreset = STYLE_PRESETS[style] || style;
   const languageLine = lang
     ? `If you include any readable text, it must be in ${lang}.`
     : "If you include any readable text, keep it minimal.";
   const childLine = childName ? `The child's name is \"${childName}\".` : "";
 
   return [
-    `Convert this photo into a children’s book illustration in a ${style} style.`,
+    `Convert this photo into a children's book illustration in a ${stylePreset} style.`,
     "Preserve faces and key features of subjects.",
     "Keep the scene warm, wholesome, and family-friendly.",
     childLine,
     languageLine,
     "Do not add extra characters or distort identity.",
+    "Do not include trademarks, logos, or copyrighted characters.",
   ]
     .filter(Boolean)
     .join("\n");
@@ -127,7 +140,7 @@ async function openAiImageEdit({ imageBuffer, filename, mimeType, prompt }) {
   }
 
   const model = process.env.OPENAI_IMAGE_MODEL || "gpt-image-1";
-  const size = process.env.OPENAI_IMAGE_SIZE || "512x512";
+  const size = process.env.OPENAI_IMAGE_SIZE || "1024x1024";
   const responseFormat = "b64_json";
 
   const formData = new FormData();
@@ -257,4 +270,3 @@ module.exports = async function handler(req, res) {
 
   json(res, 200, { images });
 };
-
