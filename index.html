@@ -245,6 +245,26 @@
       margin-top: 0.5rem;
       text-align: center;
     }
+    .photo-bulk-upload {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.35rem;
+      margin: 0.75rem 0 0.5rem;
+    }
+    .photo-bulk-upload label {
+      font-weight: 600;
+      color: #2c2b40;
+      font-size: 0.9rem;
+    }
+    .photo-bulk-upload input[type="file"] {
+      width: min(520px, 100%);
+    }
+    .photo-bulk-hint {
+      font-size: 0.85rem;
+      color: #555;
+      text-align: center;
+    }
     /* ========= Illustration Style Grid ========= */
     .style-grid {
       display: grid;
@@ -307,6 +327,60 @@
       font-size: 0.9rem;
       margin-top: 0.5rem;
       color: #5a4c48;
+    }
+    .generate-preview-intro {
+      margin: 0.25rem auto 0.75rem;
+      text-align: center;
+      color: #555;
+      max-width: 700px;
+    }
+    .generate-preview-button {
+      display: block;
+      margin: 0.5rem auto 0;
+      padding: 0.75rem 1.2rem;
+      border: none;
+      border-radius: 999px;
+      background: #2c2b40;
+      color: #fff;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+    .generate-preview-button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .generate-status {
+      text-align: center;
+      margin-top: 0.5rem;
+      color: #555;
+      min-height: 1.2em;
+    }
+    .generate-status.error {
+      color: #b00020;
+    }
+    .generated-preview-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 0.75rem;
+      margin: 1rem 0 0.5rem;
+    }
+    .generated-preview-card {
+      background: #fff;
+      border: 1px solid rgba(0,0,0,0.08);
+      border-radius: 12px;
+      padding: 0.5rem;
+    }
+    .generated-preview-card img {
+      width: 100%;
+      border-radius: 10px;
+      display: block;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .generated-preview-label {
+      margin-top: 0.35rem;
+      font-size: 0.8rem;
+      color: #5a4c48;
+      word-break: break-word;
     }
     /* ========= Final Review Section ========= */
     .final-review {
@@ -385,10 +459,15 @@
     <!-- Section 2: Photo Upload -->
     <section id="photoSection">
       <h2>2. Upload Your Photos (up to 12)</h2>
+      <div class="photo-bulk-upload">
+        <label for="photoUploadInput">Bulk upload (optional):</label>
+        <input id="photoUploadInput" type="file" accept="image/*" multiple />
+        <div class="photo-bulk-hint">Tip: you can also click any box to add/replace a photo.</div>
+      </div>
       <div class="photo-upload-grid" id="photoGrid">
         <!-- 12 photo boxes will be injected here -->
       </div>
-      <p class="photo-instructions">Not every moment has to match exactly—choose photos that best capture your family's love.</p>
+      <p class="photo-instructions">Not every moment has to match exactly-choose photos that best capture your family's love.</p>
     </section>
 
     <!-- Section 3: Child's Name -->
@@ -439,6 +518,10 @@
     <!-- Section 5: Story Preview & Page Selection -->
     <section id="previewSection">
       <h2>5. Preview Your Storybook & Select Page Count</h2>
+      <p class="generate-preview-intro">Generate illustrated previews from your uploaded photos (uses the selected style + child name).</p>
+      <button type="button" id="generatePreviewButton" class="generate-preview-button">Generate Preview</button>
+      <div id="generateStatus" class="generate-status" aria-live="polite"></div>
+      <div id="generatedPreviewGrid" class="generated-preview-grid"></div>
       <div class="page-options">
         <button onclick="loadPreview(4)">4 Pages - €29<br><small>Short and sweet</small></button>
         <button onclick="loadPreview(8)">8 Pages - €39<br><small>Just the right size</small></button>
@@ -625,5 +708,6 @@
       // Implement further checkout functionality as needed.
     }
   </script>
+  <script src="scripts.js"></script>
 </body>
 </html>

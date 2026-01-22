@@ -1,0 +1,17 @@
+{
+  "name": "storybook-site",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Static storybook site with a Vercel /api backend for OpenAI image previews.",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "busboy": "^1.6.0"
+  },
+  "scripts": {
+    "dev": "npx vercel dev",
+    "check": "node -c api/generate.js"
+  }
+}
+
