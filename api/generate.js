@@ -1,17 +1,9 @@
 const Busboy = require("busboy");
+const { getTemplate } = require("../storyTemplates.js");
 
 const OPENAI_IMAGES_EDITS_URL = "https://api.openai.com/v1/images/edits";
-
-const STYLE_PRESETS = {
-  Watercolor: "soft watercolor, pastel palette, gentle brushstrokes",
-  "Studio Ghibli Style":
-    "whimsical hand-painted animation film look, soft shading, gentle outlines, detailed natural backgrounds, neutral white balance, balanced lighting",
-  "Classic 90s Kids Book":
-    "classic 1990s children's picture book illustration, simple shapes, warm colors",
-  "Crayon Doodle": "playful crayon doodle on textured paper, childlike linework",
-  "Hand-painted Look": "hand-painted gouache illustration, rich texture, warm tones",
-  "Vintage Storybook": "vintage storybook illustration, muted colors, slight ink outlines",
-};
+const MAX_PHOTOS = 12;
+const STORY_PAGES = 6;
 
 const SUPPORTED_IMAGE_SIZES = new Set([
   "1024x1024",
@@ -20,13 +12,21 @@ const SUPPORTED_IMAGE_SIZES = new Set([
   "auto",
 ]);
 
+const STYLE_PRESETS = {
+  Watercolor:
+    "soft watercolor wash, gentle brushstrokes, subtle paper texture, pastel palette, clean whites",
+  "Cozy Anime":
+    "cozy hand-drawn animation look, soft shading, gentle outlines, natural lighting, neutral white balance, balanced skin tones",
+  "Classic Storybook":
+    "classic children's picture book illustration, ink outlines, warm balanced colors, textured paper, soft grain",
+  "Studio Ghibli Style":
+    "cozy hand-drawn animation look, soft shading, gentle outlines, natural lighting, neutral white balance, balanced skin tones",
+};
+
 function setCors(res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader(
-    "Access-Control-Allow-Headers",
-    "Content-Type, Authorization, X-Requested-With"
-  );
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
   res.setHeader("Access-Control-Max-Age", "86400");
 }
 
@@ -39,7 +39,7 @@ function json(res, statusCode, payload) {
 
 function parseMultipartForm(
   req,
-  { maxFiles = 12, maxFileSizeBytes = 10 * 1024 * 1024 } = {}
+  { maxFiles = MAX_PHOTOS, maxFileSizeBytes = 10 * 1024 * 1024 } = {}
 ) {
   return new Promise((resolve, reject) => {
     const contentType = req.headers["content-type"] || "";
@@ -63,46 +63,49 @@ function parseMultipartForm(
       fields[name] = value;
     });
 
-    busboy.on("file", (fieldname, fileStream, filenameOrInfo, encoding, mimeType) => {
-      if (files.length >= maxFiles) {
-        fileStream.resume();
-        return;
-      }
-
-      let filename = "upload";
-      let mime = "application/octet-stream";
-      if (filenameOrInfo && typeof filenameOrInfo === "object") {
-        filename = filenameOrInfo.filename || filename;
-        mime = filenameOrInfo.mimeType || mime;
-      } else {
-        filename = filenameOrInfo || filename;
-        mime = mimeType || mime;
-      }
-
-      const chunks = [];
-      let tooLarge = false;
-
-      fileStream.on("limit", () => {
-        tooLarge = true;
-      });
-
-      fileStream.on("data", (chunk) => {
-        chunks.push(chunk);
-      });
-
-      fileStream.on("end", () => {
-        if (tooLarge) {
-          reject(new Error(`File too large: ${filename}`));
+    busboy.on(
+      "file",
+      (fieldname, fileStream, filenameOrInfo, encoding, mimeType) => {
+        if (files.length >= maxFiles) {
+          fileStream.resume();
           return;
         }
-        files.push({
-          fieldname,
-          filename,
-          mimeType: mime,
-          buffer: Buffer.concat(chunks),
+
+        let filename = "upload";
+        let mime = "application/octet-stream";
+        if (filenameOrInfo && typeof filenameOrInfo === "object") {
+          filename = filenameOrInfo.filename || filename;
+          mime = filenameOrInfo.mimeType || mime;
+        } else {
+          filename = filenameOrInfo || filename;
+          mime = mimeType || mime;
+        }
+
+        const chunks = [];
+        let tooLarge = false;
+
+        fileStream.on("limit", () => {
+          tooLarge = true;
         });
-      });
-    });
+
+        fileStream.on("data", (chunk) => {
+          chunks.push(chunk);
+        });
+
+        fileStream.on("end", () => {
+          if (tooLarge) {
+            reject(new Error(`File too large: ${filename}`));
+            return;
+          }
+          files.push({
+            fieldname,
+            filename,
+            mimeType: mime,
+            buffer: Buffer.concat(chunks),
+          });
+        });
+      }
+    );
 
     busboy.on("error", reject);
     busboy.on("finish", () => resolve({ fields, files }));
@@ -120,58 +123,75 @@ async function safeReadJson(response) {
   }
 }
 
-function buildPrompt({ style, childName, lang }) {
-  const stylePreset = STYLE_PRESETS[style] || style;
-  const languageLine = lang
-    ? `If you include any readable text, it must be in ${lang}.`
-    : "If you include any readable text, keep it minimal.";
-  const childLine = childName ? `The child's name is \"${childName}\".` : "";
+function selectPhotoIndices(totalPhotos, needed) {
+  if (totalPhotos <= 0) return [];
+  if (totalPhotos >= needed) {
+    if (totalPhotos === needed) {
+      return Array.from({ length: needed }, (_, i) => i);
+    }
+
+    const lastIndex = totalPhotos - 1;
+    const denom = needed - 1;
+    return Array.from({ length: needed }, (_, i) =>
+      Math.round((i * lastIndex) / denom)
+    );
+  }
+
+  return Array.from({ length: needed }, (_, i) => i % totalPhotos);
+}
+
+function buildPrompt({ style, childName, lang, page }) {
+  const styleName = String(style || "Watercolor").trim() || "Watercolor";
+  const styleNotes = STYLE_PRESETS[styleName] || styleName;
+  const childLine = childName ? `Child name (context only): "${childName}".` : "";
+  const langLine = lang ? `Language context: ${lang}.` : "";
 
   return [
-    `Convert this photo into a children's book illustration in a ${stylePreset} style.`,
-    "Preserve faces and key features of subjects.",
-    "Keep the scene wholesome, family-friendly, and uplifting.",
-    "Preserve the original color palette and lighting; avoid strong color casts (e.g., overly orange/sepia).",
-    "Keep skin tones natural and realistic.",
+    `Convert the provided photo into a premium children’s storybook illustration in ${styleName} style.`,
+    `Style notes: ${styleNotes}.`,
+    "Preserve the identity, face, and key facial features of the people in the photo.",
+    "Keep the same number of people. Do not add new people.",
+    "Keep it warm, wholesome, family friendly.",
+    "Avoid distortions: extra fingers, warped eyes, melted features, unnatural hands.",
+    "Preserve the original color balance and lighting; avoid strong color casts (e.g., overly orange/sepia). Keep skin tones natural.",
+    "Do not add logos, watermarks, or readable text.",
     childLine,
-    languageLine,
-    "Do not add extra characters or distort identity.",
-    "Do not include trademarks, logos, or copyrighted characters.",
+    langLine,
+    `Page role: ${page.role}.`,
+    `Scene guidance: ${page.imagePrompt}.`,
   ]
     .filter(Boolean)
     .join("\n");
 }
 
-async function openAiImageEdit({ imageBuffer, filename, mimeType, prompt }) {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    throw new Error("Missing OPENAI_API_KEY environment variable");
-  }
-
-  const model = process.env.OPENAI_IMAGE_MODEL || "gpt-image-1";
-  const requestedSize = String(process.env.OPENAI_IMAGE_SIZE || "1024x1024").trim();
-  const size = SUPPORTED_IMAGE_SIZES.has(requestedSize) ? requestedSize : "auto";
-
+async function openAiImageEdit({
+  apiKey,
+  imageBuffer,
+  filename,
+  mimeType,
+  prompt,
+  model,
+  size,
+  timeoutMs,
+}) {
   const formData = new FormData();
   formData.append("model", model);
   formData.append("prompt", prompt);
   formData.append("size", size);
   formData.append("n", "1");
 
-  const blob = new Blob([imageBuffer], { type: mimeType || "application/octet-stream" });
+  const blob = new Blob([imageBuffer], {
+    type: mimeType || "application/octet-stream",
+  });
   formData.append("image", blob, filename || "photo");
 
   let signal;
-  const timeoutMsRaw = process.env.OPENAI_REQUEST_TIMEOUT_MS;
   if (
-    timeoutMsRaw &&
+    timeoutMs &&
     typeof AbortSignal !== "undefined" &&
     typeof AbortSignal.timeout === "function"
   ) {
-    const timeoutMs = Number(timeoutMsRaw);
-    if (Number.isFinite(timeoutMs) && timeoutMs > 0) {
-      signal = AbortSignal.timeout(timeoutMs);
-    }
+    signal = AbortSignal.timeout(timeoutMs);
   }
 
   const response = await fetch(OPENAI_IMAGES_EDITS_URL, {
@@ -192,17 +212,12 @@ async function openAiImageEdit({ imageBuffer, filename, mimeType, prompt }) {
     throw new Error(`OpenAI Images API error (${response.status}): ${message}`);
   }
 
-  const b64 =
-    data?.data?.[0]?.b64_json ||
-    data?.data?.[0]?.b64_png ||
-    data?.data?.[0]?.b64 ||
-    null;
-  const url = data?.data?.[0]?.url || null;
-  if (!b64 && !url) {
-    throw new Error("OpenAI response missing image data");
+  const b64 = data?.data?.[0]?.b64_json || null;
+  if (!b64) {
+    throw new Error("OpenAI response missing base64 image data");
   }
 
-  return { b64_png: b64, url };
+  return b64;
 }
 
 async function mapWithConcurrency(items, concurrency, mapper) {
@@ -217,13 +232,15 @@ async function mapWithConcurrency(items, concurrency, mapper) {
     }
   }
 
-  const workers = Array.from({ length: Math.min(concurrency, items.length) }, () => worker());
+  const workerCount = Math.max(1, Math.min(concurrency, items.length));
+  const workers = Array.from({ length: workerCount }, () => worker());
   await Promise.all(workers);
   return results;
 }
 
 module.exports = async function handler(req, res) {
   setCors(res);
+
   if (req.method === "OPTIONS") {
     res.statusCode = 204;
     res.end();
@@ -235,61 +252,120 @@ module.exports = async function handler(req, res) {
     return;
   }
 
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    json(res, 500, { error: "Server is missing OPENAI_API_KEY" });
+    return;
+  }
+
   let parsed;
   try {
     parsed = await parseMultipartForm(req, {
-      maxFiles: 12,
+      maxFiles: MAX_PHOTOS,
       maxFileSizeBytes: 12 * 1024 * 1024,
     });
   } catch (err) {
-    json(res, 400, { error: err?.message || "Invalid form upload" });
+    json(res, 400, { error: err?.message || "Invalid upload" });
     return;
   }
 
-  const style = (parsed.fields.style || "").trim();
-  const childName = (parsed.fields.childName || "").trim();
-  const lang = (parsed.fields.lang || parsed.fields.captionLanguage || "English").trim();
+  const templateId = String(parsed.fields.templateId || "").trim();
+  const style = String(parsed.fields.style || "Watercolor").trim() || "Watercolor";
+  const childName = String(parsed.fields.childName || "").trim();
+  const lang = String(parsed.fields.lang || "English").trim() || "English";
+
+  if (!templateId) {
+    json(res, 400, { error: "Missing field: templateId" });
+    return;
+  }
+
+  const template = getTemplate(templateId);
+  if (!template) {
+    json(res, 400, { error: `Unsupported templateId: ${templateId}` });
+    return;
+  }
 
   const photoFiles = parsed.files.filter(
-    (f) => f.fieldname === "photos" || f.fieldname === "photos[]"
+    (f) =>
+      f.fieldname === "photos" ||
+      f.fieldname === "photos[]" ||
+      f.fieldname === "photos[]"
   );
 
-  if (!style) {
-    json(res, 400, { error: "Missing field: style" });
-    return;
-  }
-  if (!childName) {
-    json(res, 400, { error: "Missing field: childName" });
-    return;
-  }
   if (!photoFiles.length) {
-    json(res, 400, { error: "No photos uploaded. Use field name 'photos'." });
+    json(res, 400, { error: "No photos uploaded. Use field name photos[]." });
     return;
   }
 
-  const prompt = buildPrompt({ style, childName, lang });
-  const concurrency = Number(process.env.OPENAI_IMAGE_CONCURRENCY || 2);
+  const pages = Array.isArray(template.pages)
+    ? template.pages.slice(0, STORY_PAGES)
+    : [];
+  if (pages.length !== STORY_PAGES) {
+    json(res, 400, { error: "Template is misconfigured (expected 6 pages)" });
+    return;
+  }
 
-  const images = await mapWithConcurrency(photoFiles, concurrency, async (file) => {
-    const filename = file.filename || "photo";
+  const limitedPhotos = photoFiles.slice(0, MAX_PHOTOS);
+  const chosenIndices = selectPhotoIndices(limitedPhotos.length, STORY_PAGES);
+  const chosenPhotos = chosenIndices.map((idx) => limitedPhotos[idx]);
+
+  const model = String(process.env.OPENAI_IMAGE_MODEL || "gpt-image-1.5").trim();
+  const requestedSize = String(process.env.OPENAI_IMAGE_SIZE || "1024x1024").trim();
+  const size = SUPPORTED_IMAGE_SIZES.has(requestedSize) ? requestedSize : "1024x1024";
+  const timeoutMs = Number(process.env.OPENAI_REQUEST_TIMEOUT_MS || 0) || 0;
+
+  const rawConcurrency = Number(process.env.OPENAI_IMAGE_CONCURRENCY || 2);
+  const concurrency = Number.isFinite(rawConcurrency)
+    ? Math.max(1, Math.min(3, rawConcurrency))
+    : 2;
+
+  const tasks = pages.map((page, idx) => ({
+    page,
+    pageIndex: idx + 1,
+    file: chosenPhotos[idx],
+  }));
+
+  const results = await mapWithConcurrency(tasks, concurrency, async (task) => {
+    const { pageIndex, page, file } = task;
     try {
-      const result = await openAiImageEdit({
+      const prompt = buildPrompt({ style, childName, lang, page });
+      const b64_png = await openAiImageEdit({
+        apiKey,
         imageBuffer: file.buffer,
-        filename,
+        filename: file.filename,
         mimeType: file.mimeType,
         prompt,
+        model,
+        size,
+        timeoutMs: timeoutMs > 0 ? timeoutMs : undefined,
       });
-      return { filename, ...result };
+
+      return {
+        pageIndex,
+        role: page.role,
+        caption: page.caption,
+        b64_png,
+      };
     } catch (err) {
-      return { filename, error: err?.message || "Image generation failed" };
+      return {
+        pageIndex,
+        role: page.role,
+        caption: page.caption,
+        error: err?.message || "Image generation failed",
+      };
     }
   });
 
-  const successCount = images.filter((img) => img && (img.b64_png || img.url)).length;
-  if (successCount === 0) {
-    json(res, 502, { error: "All image generations failed", images });
+  const failed = results.find((r) => r && r.error);
+  if (failed) {
+    json(res, 502, {
+      error: `Page ${failed.pageIndex} (${failed.role}) failed: ${failed.error}`,
+      pageIndex: failed.pageIndex,
+      role: failed.role,
+    });
     return;
   }
 
-  json(res, 200, { images });
+  json(res, 200, { templateId, style, pages: results });
 };
+

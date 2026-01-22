@@ -1,713 +1,98 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Personalized Storybook They’ll Treasure Forever</title>
-  <style>
-    /* ========= Global & Layout Styles ========= */
-    body {
-      margin: 0;
-      font-family: 'Segoe UI', sans-serif;
-      background: linear-gradient(to bottom, #fef6f0, #fdf1e5);
-      color: #333;
-      line-height: 1.5;
-    }
-    header {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      padding: 1.5rem 1rem;
-      position: relative;
-    }
-    header h1 {
-      font-size: 2.5rem;
-      color: #2c2b40;
-      margin: 0;
-    }
-    /* Discreet Header Icon with label "Login" */
-    .header-icon {
-      position: absolute;
-      right: 1rem;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      background: #ccc;
-      color: #2c2b40;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.8rem;
-      cursor: pointer;
-    }
-    /* Header Dropdown Panel */
-    .header-dropdown {
-      position: absolute;
-      top: 70px;
-      right: 1rem;
-      background: #fff;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-      padding: 1rem;
-      display: none;
-      z-index: 1000;
-      width: 250px;
-    }
-    .header-dropdown h3 {
-      margin: 0 0 0.5rem 0;
-      font-size: 1rem;
-      color: #2c2b40;
-    }
-    .header-dropdown .login-buttons {
-      display: flex;
-      gap: 0.5rem;
-      justify-content: center;
-      margin-bottom: 0.5rem;
-    }
-    .header-dropdown .login-buttons button {
-      padding: 0.5rem 0.8rem;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      font-size: 0.9rem;
-    }
-    .header-dropdown .google { background: #DB4437; color: #fff; }
-    .header-dropdown .apple  { background: #000; color: #fff; }
-    .header-dropdown .facebook { background: #4267B2; color: #fff; }
-    .header-dropdown .secondary-options {
-      font-size: 0.8rem;
-      text-align: center;
-    }
-    .header-dropdown .secondary-options button {
-      margin-top: 0.5rem;
-      background: #2c2b40;
-      color: #fff;
-      border: none;
-      padding: 0.5rem 0.8rem;
-      border-radius: 5px;
-      cursor: pointer;
-      font-size: 0.9rem;
-      width: 100%;
-    }
-    .header-dropdown form {
-      margin-top: 0.5rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
-    .header-dropdown form input {
-      padding: 0.5rem;
-      font-size: 0.9rem;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-      width: 100%;
-    }
-    .header-dropdown form button {
-      padding: 0.5rem;
-      font-size: 0.9rem;
-      background: #2c2b40;
-      color: #fff;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      width: 100%;
-    }
-    /* ========= Main Container & Intro Section ========= */
-    main {
-      width: 90%;
-      max-width: 600px;
-      margin: 1.5rem auto;
-      background: #fff;
-      border-radius: 15px;
-      padding: 1rem;
-      box-shadow: 0 3px 15px rgba(0, 0, 0, 0.1);
-    }
-    #homepage-intro {
-      text-align: center;
-      margin-bottom: 2rem;
-    }
-    #homepage-intro h2 {
-      margin-bottom: 0.5rem;
-      color: #2c2b40;
-    }
-    #homepage-intro p {
-      color: #555;
-      margin-bottom: 1rem;
-    }
-    #homepage-intro button {
-      padding: 0.75rem 1.2rem;
-      background: #2c2b40;
-      color: #fff;
-      border: none;
-      border-radius: 25px;
-      font-size: 1rem;
-      cursor: pointer;
-    }
-    /* ========= Section Containers ========= */
-    section {
-      margin-bottom: 2rem;
-    }
-    section h2 {
-      margin-top: 0;
-      color: #2c2b40;
-    }
-    label {
-      display: block;
-      margin-bottom: 0.25rem;
-      font-weight: bold;
-      color: #333;
-    }
-    input, select {
-      width: 100%;
-      padding: 0.5rem;
-      margin-bottom: 1rem;
-      border: 1px solid #ccc;
-      border-radius: 10px;
-      font-size: 1rem;
-    }
-    /* ========= Story Template Cards ========= */
-    .template-cards {
-      display: flex;
-      gap: 1rem;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-    .template-card {
-      flex: 1 1 45%;
-      border: 2px solid transparent;
-      border-radius: 10px;
-      padding: 1rem;
-      cursor: pointer;
-      transition: border 0.3s ease;
-      background: #f9f9f9;
-    }
-    .template-card.selected {
-      border-color: #2c2b40;
-    }
-    .template-card h3 {
-      margin: 0.5rem 0;
-      color: #2c2b40;
-    }
-    .template-card p {
-      font-size: 0.9rem;
-      color: #555;
-    }
-    /* ========= Photo Upload Grid ========= */
-    .photo-upload-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 0.5rem;
-    }
-    .photo-upload-wrapper {
-      text-align: center;
-    }
-    .photo-box {
-      border: 2px dashed #ccc;
-      border-radius: 10px;
-      aspect-ratio: 1;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      font-size: 2rem;
-      color: #aaa;
-      cursor: pointer;
-      transition: background-color 0.3s ease;
-      position: relative;
-      padding: 0.5rem;
-    }
-    .photo-box:hover {
-      background-color: #f0eae4;
-    }
-    .photo-box img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      border-radius: 8px;
-    }
-    .plus-sign {
-      font-size: 2rem;
-      line-height: 1;
-    }
-    .photo-prompt {
-      font-size: 0.7rem;
-      color: #777;
-      margin-top: 0.3rem;
-      text-align: center;
-      padding: 0 0.2rem;
-    }
-    .photo-instructions {
-      font-size: 0.85rem;
-      color: #555;
-      margin-top: 0.5rem;
-      text-align: center;
-    }
-    .photo-bulk-upload {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 0.35rem;
-      margin: 0.75rem 0 0.5rem;
-    }
-    .photo-bulk-upload label {
-      font-weight: 600;
-      color: #2c2b40;
-      font-size: 0.9rem;
-    }
-    .photo-bulk-upload input[type="file"] {
-      width: min(520px, 100%);
-    }
-    .photo-bulk-hint {
-      font-size: 0.85rem;
-      color: #555;
-      text-align: center;
-    }
-    /* ========= Illustration Style Grid ========= */
-    .style-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 0.5rem;
-      margin-bottom: 1rem;
-      justify-items: center;
-    }
-    .style-card {
-      width: 120px;
-      text-align: center;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      cursor: pointer;
-      border: 2px solid transparent;
-      border-radius: 12px;
-      padding: 0.5rem;
-    }
-    .style-card.selected {
-      border-color: #2c2b40;
-    }
-    .style-card img {
-      width: 100%;
-      border-radius: 12px;
-    }
-    .style-card .illustration-caption {
-      margin-top: 0.5rem;
-      font-size: 0.9rem;
-      color: #555;
-      line-height: 1.2;
-    }
-    /* ========= Story Preview & Page Selection ========= */
-    .page-options button {
-      margin: 0.5rem;
-      padding: 0.6rem 1.2rem;
-      border-radius: 20px;
-      background: #db864e;
-      color: white;
-      border: none;
-      cursor: pointer;
-      font-size: 0.9rem;
-    }
-    .preview-container {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 1.5rem;
-      margin-top: 1rem;
-    }
-    .preview-page {
-      width: 160px;
-    }
-    .preview-img {
-      width: 100%;
-      border-radius: 10px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-    .preview-text {
-      font-size: 0.9rem;
-      margin-top: 0.5rem;
-      color: #5a4c48;
-    }
-    .generate-preview-intro {
-      margin: 0.25rem auto 0.75rem;
-      text-align: center;
-      color: #555;
-      max-width: 700px;
-    }
-    .generate-preview-button {
-      display: block;
-      margin: 0.5rem auto 0;
-      padding: 0.75rem 1.2rem;
-      border: none;
-      border-radius: 999px;
-      background: #2c2b40;
-      color: #fff;
-      cursor: pointer;
-      font-size: 1rem;
-    }
-    .generate-preview-button:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
-    .generate-status {
-      text-align: center;
-      margin-top: 0.5rem;
-      color: #555;
-      min-height: 1.2em;
-    }
-    .generate-status.error {
-      color: #b00020;
-    }
-    .generated-preview-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-      gap: 0.75rem;
-      margin: 1rem 0 0.5rem;
-    }
-    .generated-preview-card {
-      background: #fff;
-      border: 1px solid rgba(0,0,0,0.08);
-      border-radius: 12px;
-      padding: 0.5rem;
-    }
-    .generated-preview-card img {
-      width: 100%;
-      border-radius: 10px;
-      display: block;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    }
-    .generated-preview-label {
-      margin-top: 0.35rem;
-      font-size: 0.8rem;
-      color: #5a4c48;
-      word-break: break-word;
-    }
-    /* ========= Final Review Section ========= */
-    .final-review {
-      background: #f9f9f9;
-      padding: 1rem;
-      border-radius: 10px;
-      margin-bottom: 1rem;
-    }
-    .final-review p {
-      margin: 0.5rem 0;
-    }
-    .final-review button {
-      padding: 0.75rem 1.2rem;
-      border: none;
-      border-radius: 25px;
-      background: #2c2b40;
-      color: #fff;
-      cursor: pointer;
-      font-size: 1rem;
-      margin-right: 0.5rem;
-    }
-    footer {
-      text-align: center;
-      margin: 2rem 0;
-      color: #777;
-    }
-  </style>
-</head>
-<body>
-  <!-- ========= Header Section ========= -->
-  <header>
-    <h1>Personalized Storybook They’ll Treasure Forever</h1>
-    <div class="header-icon" id="headerIcon">Login</div>
-    <div class="header-dropdown" id="headerDropdown">
-      <h3>Sign in with:</h3>
-      <div class="login-buttons">
-        <button class="login-button google">Google</button>
-        <button class="login-button apple">Apple</button>
-        <button class="login-button facebook">Facebook</button>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Storybook Preview</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container">
+        <h1>Storybook Preview</h1>
+        <p class="subtitle">
+          Upload photos you love. No need to match exact moments — we will place them into the story
+          automatically.
+        </p>
       </div>
-      <div class="secondary-options">
-        <button class="guest-button">Continue as Guest</button>
+    </header>
+
+    <main class="container">
+      <section class="card">
+        <h2>1) Choose a story template</h2>
+        <div id="templateList" class="template-list">
+          <button
+            type="button"
+            class="template-card selected"
+            data-template-id="mom-love-0-3"
+            aria-pressed="true"
+          >
+            <div class="template-title">To Mom, With Love (Ages 0–3)</div>
+            <div class="template-desc">A warm 6-page story built from your photos.</div>
+          </button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>2) Upload photos (6–12)</h2>
+        <label class="file-input">
+          <input id="photosInput" type="file" accept="image/*" multiple />
+          <span>Select photos</span>
+        </label>
+        <div class="help">
+          Upload photos you love in one bulk upload. We’ll automatically pick 6 for the preview.
+        </div>
+        <div id="photoGrid" class="photo-grid" aria-label="Uploaded photos"></div>
+      </section>
+
+      <section class="card">
+        <h2>3) Style + details</h2>
+        <div class="form-row">
+          <label for="styleSelect">Illustration style</label>
+          <select id="styleSelect">
+            <option value="Watercolor" selected>Watercolor</option>
+            <option value="Cozy Anime">Cozy Anime</option>
+            <option value="Classic Storybook">Classic Storybook</option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <label for="childNameInput">Child name (optional)</label>
+          <input id="childNameInput" type="text" placeholder="e.g. Alice" />
+        </div>
+
+        <div class="form-row">
+          <label for="langSelect">Language (optional)</label>
+          <select id="langSelect">
+            <option value="English" selected>English</option>
+            <option value="Spanish">Spanish</option>
+            <option value="French">French</option>
+            <option value="German">German</option>
+            <option value="Italian">Italian</option>
+          </select>
+        </div>
+
+        <button id="generatePreviewBtn" class="primary-btn" type="button">Generate Preview</button>
+        <div id="genStatus" class="status" role="status" aria-live="polite"></div>
+      </section>
+
+      <section class="card">
+        <h2>Preview (6 pages)</h2>
+        <div id="previewBook" class="preview-book"></div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <small>
+          Images are generated via the OpenAI Images API. Your uploads are used only to create the
+          preview.
+        </small>
       </div>
-      <form id="headerEmailLogin">
-        <input type="email" placeholder="Email" required />
-        <input type="password" placeholder="Password" required />
-        <button type="submit">Login</button>
-      </form>
-    </div>
-  </header>
+    </footer>
 
-  <!-- ========= Main Content ========= -->
-  <main>
-    <!-- Homepage Intro Section -->
-    <section id="homepage-intro">
-      <h2>Create a timeless keepsake for Mom.</h2>
-      <p>Upload your favorite photos, and we'll turn real moments with your little one (ages 0–3) into a beautifully illustrated, heartfelt storybook she'll cherish forever.</p>
-      <button id="ctaButton">Start Creating</button>
-    </section>
-
-    <!-- Section 1: Story Template Selection -->
-    <section id="templateSection">
-      <h2>1. Choose Your Story Template</h2>
-      <div class="template-cards">
-        <div class="template-card" data-template="to_mom">
-          <h3>To Mom, With Love (Ages 0–3)</h3>
-          <p>A sweet, illustrated tribute to the love, warmth, and special moments shared between Mom and baby. Perfect for celebrating first memories and Mother’s Day.</p>
-        </div>
-        <div class="template-card" data-template="first_adventures">
-          <h3>Our First Adventures (Ages 1–3)</h3>
-          <p>Celebrate the joy of discovery—from first steps to playful days at home and beyond. Ideal for capturing milestones and everyday smiles.</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- Section 2: Photo Upload -->
-    <section id="photoSection">
-      <h2>2. Upload Your Photos (up to 12)</h2>
-      <div class="photo-bulk-upload">
-        <label for="photoUploadInput">Bulk upload (optional):</label>
-        <input id="photoUploadInput" type="file" accept="image/*" multiple />
-        <div class="photo-bulk-hint">Tip: you can also click any box to add/replace a photo.</div>
-      </div>
-      <div class="photo-upload-grid" id="photoGrid">
-        <!-- 12 photo boxes will be injected here -->
-      </div>
-      <p class="photo-instructions">Not every moment has to match exactly-choose photos that best capture your family's love.</p>
-    </section>
-
-    <!-- Section 3: Child's Name -->
-    <section id="childSection">
-      <h2>3. Enter Child’s Name</h2>
-      <label for="childName">Child’s Name:</label>
-      <input type="text" id="childName" placeholder="Enter child's name" />
-    </section>
-
-    <!-- Section 4: Language & Illustration Style -->
-    <section id="languageStyleSection">
-      <h2>4. Choose Caption Language & Illustration Style</h2>
-      <label for="captionLanguage">Caption Language:</label>
-      <select id="captionLanguage">
-        <option value="English">English</option>
-        <option value="French">French</option>
-        <option value="Spanish">Spanish</option>
-      </select>
-      <p>Select an Illustration Style:</p>
-      <div class="style-grid" id="styleGrid">
-        <div class="style-card" data-style="Watercolor">
-          <img src="images/style_1.png" alt="Watercolor" />
-          <div class="illustration-caption">Watercolor</div>
-        </div>
-        <div class="style-card" data-style="Studio Ghibli Style">
-          <img src="images/style_2.png" alt="Studio Ghibli Style" />
-          <div class="illustration-caption">Studio Ghibli Style</div>
-        </div>
-        <div class="style-card" data-style="Classic 90s Kids Book">
-          <img src="images/style_3.png" alt="Classic 90s Kids Book" />
-          <div class="illustration-caption">Classic 90s Kids Book</div>
-        </div>
-        <div class="style-card" data-style="Crayon Doodle">
-          <img src="images/style_4.png" alt="Crayon Doodle" />
-          <div class="illustration-caption">Crayon Doodle</div>
-        </div>
-        <div class="style-card" data-style="Hand-painted Look">
-          <img src="images/style_5.png" alt="Hand-painted Look" />
-          <div class="illustration-caption">Hand-painted Look</div>
-        </div>
-        <div class="style-card" data-style="Vintage Storybook">
-          <img src="images/style_6.png" alt="Vintage Storybook" />
-          <div class="illustration-caption">Vintage Storybook</div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Section 5: Story Preview & Page Selection -->
-    <section id="previewSection">
-      <h2>5. Preview Your Storybook & Select Page Count</h2>
-      <p class="generate-preview-intro">Generate illustrated previews from your uploaded photos (uses the selected style + child name).</p>
-      <button type="button" id="generatePreviewButton" class="generate-preview-button">Generate Preview</button>
-      <div id="generateStatus" class="generate-status" aria-live="polite"></div>
-      <div id="generatedPreviewGrid" class="generated-preview-grid"></div>
-      <div class="page-options">
-        <button onclick="loadPreview(4)">4 Pages - €29<br><small>Short and sweet</small></button>
-        <button onclick="loadPreview(8)">8 Pages - €39<br><small>Just the right size</small></button>
-        <button onclick="loadPreview(12)">12 Pages - €49<br><small>The full story</small></button>
-      </div>
-      <div id="preview-container" class="preview-container"></div>
-    </section>
-
-    <!-- Section 6: Final Review & Checkout -->
-    <section id="finalReviewSection">
-      <h2>6. Review & Checkout</h2>
-      <div class="final-review" id="finalReview">
-        <!-- Final summary will appear here -->
-      </div>
-      <button onclick="buildFinalReview()">Update Summary</button>
-      <button onclick="checkout()">Proceed to Shipping & Checkout</button>
-    </section>
-  </main>
-
-  <footer>
-    &copy; 2025 Personalized Storybook They’ll Treasure Forever. All rights reserved.
-  </footer>
-
-  <script>
-    // ======= Header Dropdown Logic =======
-    const headerIcon = document.getElementById("headerIcon");
-    const headerDropdown = document.getElementById("headerDropdown");
-    headerIcon.addEventListener("click", () => {
-      headerDropdown.style.display = headerDropdown.style.display === "block" ? "none" : "block";
-    });
-
-    // ======= Homepage Intro CTA =======
-    const ctaButton = document.getElementById("ctaButton");
-    ctaButton.addEventListener("click", () => {
-      // Scroll to the first section (Story Template) on click
-      document.getElementById("templateSection").scrollIntoView({ behavior: "smooth" });
-    });
-
-    // ======= Story Template Card Selection =======
-    let selectedTemplate = "";
-    const templateCards = document.querySelectorAll(".template-card");
-    templateCards.forEach(card => {
-      card.addEventListener("click", () => {
-        templateCards.forEach(c => c.classList.remove("selected"));
-        card.classList.add("selected");
-        selectedTemplate = card.getAttribute("data-template");
-      });
-    });
-
-    // ======= Photo Upload Grid Setup (12 boxes) =======
-    const photoGrid = document.getElementById("photoGrid");
-    const totalPhotos = 12;
-    let uploadedPhotos = new Array(totalPhotos).fill(null);
-    const photoUploadPrompts = [
-      "Mom holding baby for the first time.",
-      "A picture of baby smiling or laughing with Mom.",
-      "Mom and baby during a cozy cuddle or nap.",
-      "Playful bath-time snapshot.",
-      "A fun, messy feeding moment.",
-      "Mom reading to baby or snuggling at bedtime.",
-      "A simple, joyful moment from your day-to-day.",
-      "Exploring nature or a favorite place together.",
-      "A silly moment or funny expression caught on camera.",
-      "Your personal favorite moment—anything that warms your heart.",
-      "Baby exploring a new toy or experience.",
-      "Quiet moments of connection—gentle touches, gazes, or shared calmness."
-    ];
-    for (let i = 0; i < totalPhotos; i++) {
-      const wrapper = document.createElement("div");
-      wrapper.className = "photo-upload-wrapper";
-      const box = document.createElement("div");
-      box.className = "photo-box";
-      // Include a plus sign and the corresponding prompt
-      box.innerHTML = `<div class="plus-sign">+</div><div class="photo-prompt">${photoUploadPrompts[i]}</div>`;
-      box.setAttribute("data-index", i);
-      box.addEventListener("click", () => {
-        const fileInput = document.createElement("input");
-        fileInput.type = "file";
-        fileInput.accept = "image/*";
-        fileInput.onchange = () => {
-          const file = fileInput.files[0];
-          if (file) {
-            const reader = new FileReader();
-            reader.onload = () => {
-              box.innerHTML = "";
-              const imgEl = document.createElement("img");
-              imgEl.src = reader.result;
-              box.appendChild(imgEl);
-              // Optionally, you can remove or hide the prompt after upload
-              uploadedPhotos[box.getAttribute("data-index")] = reader.result;
-            };
-            reader.readAsDataURL(file);
-          }
-        };
-        fileInput.click();
-      });
-      wrapper.appendChild(box);
-      photoGrid.appendChild(wrapper);
-    }
-
-    // ======= Illustration Style Selection =======
-    const styleGrid = document.getElementById("styleGrid");
-    let selectedStyle = "";
-    styleGrid.querySelectorAll(".style-card").forEach(card => {
-      card.addEventListener("click", () => {
-        styleGrid.querySelectorAll(".style-card").forEach(c => c.classList.remove("selected"));
-        card.classList.add("selected");
-        selectedStyle = card.getAttribute("data-style");
-      });
-    });
-
-    // ======= Story Preview Logic =======
-    const previewContainer = document.getElementById("preview-container");
-    // Sample story pages (using the "to_mom" template for demonstration)
-    const samplePages = {
-      4: [
-        { img: 'to_mom_with_love/cover_page.png', text: "To Mom, With Love — by [Child's Name]" },
-        { img: 'to_mom_with_love/page_1.png', text: "Dear Mom, thank you for every cuddle and smile." },
-        { img: 'to_mom_with_love/page_2.png', text: "You make bath time the best time of day." },
-        { img: 'to_mom_with_love/back_cover.png', text: "Happy Mother's Day!" }
-      ],
-      8: [
-        { img: 'to_mom_with_love/cover_page.png', text: "To Mom, With Love — by [Child's Name]" },
-        { img: 'to_mom_with_love/page_1.png', text: "Dear Mom, you were there from my first breath." },
-        { img: 'to_mom_with_love/page_2.png', text: "Your hugs make everything better." },
-        { img: 'to_mom_with_love/page_3.png', text: "You always know when I need a nap... or a snack!" },
-        { img: 'to_mom_with_love/page_4.png', text: "You read my favorite stories night after night." },
-        { img: 'to_mom_with_love/page_5.png', text: "Thank you for teaching me with kindness." },
-        { img: 'to_mom_with_love/page_6.png', text: "You're my superhero in pajamas." },
-        { img: 'to_mom_with_love/back_cover.png', text: "With love, [Child's Name]" }
-      ],
-      12: [
-        { img: 'to_mom_with_love/cover_page.png', text: "To Mom, With Love — by [Child's Name]" },
-        { img: 'to_mom_with_love/page_1.png', text: "Our story begins with your warmest smile." },
-        { img: 'to_mom_with_love/page_2.png', text: "You gave me the world with every gentle word." },
-        { img: 'to_mom_with_love/page_3.png', text: "Even when tired, you never stop giving." },
-        { img: 'to_mom_with_love/page_4.png', text: "Your lap is my favorite place to be." },
-        { img: 'to_mom_with_love/page_5.png', text: "Thank you for cheering me on, always." },
-        { img: 'to_mom_with_love/page_6.png', text: "You make our home a happy place." },
-        { img: 'to_mom_with_love/page_7.png', text: "I love our quiet afternoons together." },
-        { img: 'to_mom_with_love/page_8.png', text: "Every day with you is an adventure." },
-        { img: 'to_mom_with_love/page_9.png', text: "You're my first best friend." },
-        { img: 'to_mom_with_love/page_10.png', text: "I love you, today and forever." },
-        { img: 'to_mom_with_love/back_cover.png', text: "From your little [Child's Name]." }
-      ]
-    };
-
-    function loadPreview(pageCount) {
-      previewContainer.innerHTML = "";
-      const childName = document.getElementById("childName").value.trim() || "Your Child";
-      samplePages[pageCount].forEach((page, idx) => {
-        let pageText = page.text.replace(/\[Child's Name\]/g, childName);
-        const pageDiv = document.createElement("div");
-        pageDiv.className = "preview-page";
-        pageDiv.innerHTML = `
-          <img src="${page.img}" alt="Page ${idx + 1}" class="preview-img">
-          <p class="preview-text">${pageText}</p>
-        `;
-        previewContainer.appendChild(pageDiv);
-      });
-    }
-
-    // ======= Final Review Build =======
-    function buildFinalReview() {
-      const finalReview = document.getElementById("finalReview");
-      const storyTemplate = selectedTemplate || "Not selected";
-      const childName = document.getElementById("childName").value.trim() || "Not provided";
-      const captionLanguage = document.getElementById("captionLanguage").value;
-      const styleText = selectedStyle || "Not selected";
-      const photosCount = uploadedPhotos.filter(p => p !== null).length;
-      finalReview.innerHTML = `
-        <p><strong>Story Template:</strong> ${storyTemplate}</p>
-        <p><strong>Child’s Name:</strong> ${childName}</p>
-        <p><strong>Caption Language:</strong> ${captionLanguage}</p>
-        <p><strong>Illustration Style:</strong> ${styleText}</p>
-        <p><strong>Uploaded Photos:</strong> ${photosCount} / ${totalPhotos}</p>
-      `;
-    }
-
-    // ======= Checkout Placeholder =======
-    function checkout() {
-      buildFinalReview();
-      alert("Proceeding to Shipping & Checkout...");
-      // Implement further checkout functionality as needed.
-    }
-  </script>
-  <script src="scripts.js"></script>
-</body>
+    <script src="storyTemplates.js"></script>
+    <script src="scripts.js"></script>
+  </body>
 </html>
+

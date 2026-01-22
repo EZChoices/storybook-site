@@ -1,10 +1,19 @@
-// scripts.js
-
 document.addEventListener("DOMContentLoaded", () => {
-  const generateButton = document.getElementById("generatePreviewButton");
-  const statusEl = document.getElementById("generateStatus");
-  const gridEl = document.getElementById("generatedPreviewGrid");
-  const bulkUploadInput = document.getElementById("photoUploadInput");
+  const MAX_PHOTOS = 12;
+
+  const templateList = document.getElementById("templateList");
+  const photosInput = document.getElementById("photosInput");
+  const photoGrid = document.getElementById("photoGrid");
+  const styleSelect = document.getElementById("styleSelect");
+  const childNameInput = document.getElementById("childNameInput");
+  const langSelect = document.getElementById("langSelect");
+  const generateBtn = document.getElementById("generatePreviewBtn");
+  const statusEl = document.getElementById("genStatus");
+  const previewBook = document.getElementById("previewBook");
+
+  let selectedTemplateId = "mom-love-0-3";
+  let selectedFiles = [];
+  let objectUrls = [];
 
   function setStatus(message, { error = false } = {}) {
     if (!statusEl) return;
@@ -12,260 +21,174 @@ document.addEventListener("DOMContentLoaded", () => {
     statusEl.classList.toggle("error", Boolean(error));
   }
 
-  function clearGrid() {
-    if (!gridEl) return;
-    gridEl.innerHTML = "";
+  function clearPreview() {
+    if (!previewBook) return;
+    previewBook.innerHTML = "";
   }
 
-  function getUploadedPhotosArray() {
-    if (typeof uploadedPhotos === "undefined" || !Array.isArray(uploadedPhotos)) return null;
-    return uploadedPhotos;
+  function cleanupObjectUrls() {
+    for (const url of objectUrls) URL.revokeObjectURL(url);
+    objectUrls = [];
   }
 
-  function getSelectedStyle() {
-    if (typeof selectedStyle === "undefined") return "";
-    return String(selectedStyle || "").trim();
+  function renderPhotoGrid() {
+    if (!photoGrid) return;
+    cleanupObjectUrls();
+    photoGrid.innerHTML = "";
+
+    for (let i = 0; i < MAX_PHOTOS; i += 1) {
+      const slot = document.createElement("div");
+      slot.className = "photo-slot";
+
+      const badge = document.createElement("div");
+      badge.className = "slot-index";
+      badge.textContent = String(i + 1);
+      slot.appendChild(badge);
+
+      const file = selectedFiles[i];
+      if (file) {
+        const url = URL.createObjectURL(file);
+        objectUrls.push(url);
+
+        const img = document.createElement("img");
+        img.src = url;
+        img.alt = file.name || `Photo ${i + 1}`;
+        slot.appendChild(img);
+      } else {
+        slot.appendChild(document.createTextNode("Add a photo"));
+      }
+
+      photoGrid.appendChild(slot);
+    }
   }
 
-  function extensionFromMime(mimeType) {
-    const mime = (mimeType || "").toLowerCase();
-    if (mime.includes("png")) return "png";
-    if (mime.includes("jpeg") || mime.includes("jpg")) return "jpg";
-    if (mime.includes("webp")) return "webp";
-    return "png";
+  function getTemplate(templateId) {
+    const api = globalThis.StoryTemplates;
+    if (!api || typeof api.getTemplate !== "function") return null;
+    return api.getTemplate(templateId);
   }
 
-  async function dataUrlToBlob(dataUrl) {
-    const response = await fetch(dataUrl);
-    return await response.blob();
-  }
+  function setSelectedTemplate(templateId) {
+    selectedTemplateId = templateId;
 
-  async function readFileAsDataUrl(file) {
-    return await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onerror = () => reject(new Error("Failed to read file"));
-      reader.onload = () => resolve(reader.result);
-      reader.readAsDataURL(file);
+    templateList?.querySelectorAll("[data-template-id]").forEach((el) => {
+      const isSelected = el.getAttribute("data-template-id") === templateId;
+      el.classList.toggle("selected", isSelected);
+      el.setAttribute("aria-pressed", isSelected ? "true" : "false");
     });
   }
 
-  function getPhotoBoxByIndex() {
-    const boxes = document.querySelectorAll(".photo-box[data-index]");
-    const byIndex = new Map();
-    boxes.forEach((box) => {
-      const idx = Number(box.getAttribute("data-index"));
-      if (!Number.isNaN(idx)) byIndex.set(idx, box);
-    });
-    return byIndex;
-  }
+  templateList?.addEventListener("click", (e) => {
+    const target = e.target?.closest?.("[data-template-id]");
+    if (!target) return;
+    const templateId = target.getAttribute("data-template-id");
+    if (!templateId) return;
+    setSelectedTemplate(templateId);
+  });
 
-  function renderPhotoIntoBox(box, dataUrl) {
-    box.innerHTML = "";
-    const imgEl = document.createElement("img");
-    imgEl.src = dataUrl;
-    box.appendChild(imgEl);
-  }
+  photosInput?.addEventListener("change", () => {
+    const allFiles = Array.from(photosInput.files || []).filter((f) =>
+      String(f.type || "").toLowerCase().startsWith("image/")
+    );
+    selectedFiles = allFiles.slice(0, MAX_PHOTOS);
+    renderPhotoGrid();
+    clearPreview();
 
-  if (bulkUploadInput) {
-    bulkUploadInput.addEventListener("change", async () => {
-      const photos = getUploadedPhotosArray();
-      if (!photos) {
-        alert("Photo grid isn't ready yet. Please reload and try again.");
-        return;
-      }
+    if (allFiles.length > MAX_PHOTOS) {
+      setStatus(`Loaded ${MAX_PHOTOS} photos (extra files ignored).`);
+      return;
+    }
 
-      const files = Array.from(bulkUploadInput.files || []).slice(0, photos.length);
-      if (files.length === 0) return;
+    setStatus(selectedFiles.length ? `Loaded ${selectedFiles.length} photo(s).` : "");
+  });
 
-      const boxesByIndex = getPhotoBoxByIndex();
-      let filled = 0;
-
-      for (const file of files) {
-        const nextIndex = photos.findIndex((p) => p === null);
-        if (nextIndex === -1) break;
-
-        const box = boxesByIndex.get(nextIndex);
-        if (!box) continue;
-
-        const dataUrl = await readFileAsDataUrl(file);
-        renderPhotoIntoBox(box, dataUrl);
-        photos[nextIndex] = dataUrl;
-        filled += 1;
-      }
-
-      if (filled === 0) {
-        alert("All 12 slots are already filled.");
-      }
-
-      bulkUploadInput.value = "";
-    });
-  }
-
-  if (!generateButton) return;
-
-  generateButton.addEventListener("click", async () => {
-    clearGrid();
+  async function generatePreview() {
     setStatus("");
+    clearPreview();
 
-    const style = getSelectedStyle();
-    const childName = String(document.getElementById("childName")?.value || "").trim();
-    const lang = String(document.getElementById("captionLanguage")?.value || "English").trim();
-    const photos = getUploadedPhotosArray();
-
-    if (!photos) {
-      setStatus("Photo grid isn't ready yet. Please reload and try again.", { error: true });
-      return;
-    }
-    if (!style) {
-      setStatus("Please select an illustration style first.", { error: true });
-      return;
-    }
-    if (!childName) {
-      setStatus("Please enter your child's name first.", { error: true });
+    const template = getTemplate(selectedTemplateId);
+    if (!template) {
+      setStatus("Template unavailable. Please reload.", { error: true });
       return;
     }
 
-    const selected = photos
-      .map((dataUrl, index) => ({ dataUrl, index }))
-      .filter((p) => Boolean(p.dataUrl))
-      .slice(0, 12);
-
-    if (selected.length === 0) {
+    if (!selectedFiles.length) {
       setStatus("Please upload at least 1 photo.", { error: true });
       return;
     }
 
-    generateButton.disabled = true;
-    const originalLabel = generateButton.textContent;
-    generateButton.textContent = "Generating…";
-    setStatus(`Generating ${selected.length} image(s)…`);
+    generateBtn.disabled = true;
+    const originalLabel = generateBtn.textContent;
+    generateBtn.textContent = "Generating…";
 
     try {
-      function renderImages(images) {
-        images.forEach((img) => {
-          const card = document.createElement("div");
-          card.className = "generated-preview-card";
+      const formData = new FormData();
+      formData.append("templateId", selectedTemplateId);
+      formData.append("style", String(styleSelect?.value || "Watercolor"));
+      formData.append("childName", String(childNameInput?.value || "").trim());
+      formData.append("lang", String(langSelect?.value || "English"));
 
-          if (img?.b64_png) {
-            const imageEl = document.createElement("img");
-            imageEl.src = `data:image/png;base64,${img.b64_png}`;
-            imageEl.alt = img.filename || "Generated image";
-            card.appendChild(imageEl);
-          } else if (img?.url) {
-            const imageEl = document.createElement("img");
-            imageEl.src = img.url;
-            imageEl.alt = img.filename || "Generated image";
-            card.appendChild(imageEl);
-          } else {
-            const errorEl = document.createElement("div");
-            errorEl.className = "generated-preview-label";
-            errorEl.textContent = img?.error
-              ? `Error: ${img.error}`
-              : "Error: image generation failed";
-            card.appendChild(errorEl);
-          }
-
-          const label = document.createElement("div");
-          label.className = "generated-preview-label";
-          label.textContent = img?.filename || "photo";
-          card.appendChild(label);
-
-          gridEl?.appendChild(card);
-        });
+      for (const file of selectedFiles) {
+        formData.append("photos[]", file, file.name || "photo");
       }
 
-      function chunkArray(items, size) {
-        const chunks = [];
-        for (let i = 0; i < items.length; i += size) {
-          chunks.push(items.slice(i, i + size));
-        }
-        return chunks;
-      }
+      setStatus("Generating 6 illustrated pages…");
 
-      const total = selected.length;
-      const batchSize = 1;
-      let processed = 0;
-      let successes = 0;
-      let failures = 0;
-      let timedOut = 0;
-
-      for (const batch of chunkArray(selected, batchSize)) {
-        const formData = new FormData();
-        formData.append("style", style);
-        formData.append("childName", childName);
-        formData.append("lang", lang);
-
-        const filenames = [];
-        for (const { dataUrl, index } of batch) {
-          const blob = await dataUrlToBlob(dataUrl);
-          const ext = extensionFromMime(blob.type);
-          const filename = `photo_${index + 1}.${ext}`;
-          filenames.push(filename);
-          formData.append("photos", blob, filename);
-        }
-
-        setStatus(`Generating ${processed + batch.length} / ${total}…`);
-
-        let response;
-        let data = null;
-        try {
-          response = await fetch("/api/generate", {
-            method: "POST",
-            body: formData,
-          });
-          data = await response.json().catch(() => null);
-        } catch (err) {
-          failures += filenames.length;
-          renderImages(
-            filenames.map((filename) => ({
-              filename,
-              error: err?.message || "Request failed",
-            }))
-          );
-          processed += batch.length;
-          setStatus(`Generated ${successes} / ${processed} (errors: ${failures}).`, {
-            error: true,
-          });
-          continue;
-        }
-
-        const images = Array.isArray(data?.images) ? data.images : [];
-        if (images.length > 0) {
-          const batchSuccesses = images.filter((img) => img && (img.b64_png || img.url)).length;
-          const batchFailures = images.filter((img) => img && !(img.b64_png || img.url)).length;
-          successes += batchSuccesses;
-          failures += batchFailures;
-          renderImages(images);
-        } else {
-          failures += filenames.length;
-          renderImages(
-            filenames.map((filename) => ({
-              filename,
-              error: data?.error || `Request failed (${response.status})`,
-            }))
-          );
-        }
-
-        processed += batch.length;
-        setStatus(`Generated ${successes} / ${processed} (errors: ${failures}).`, {
-          error: failures > 0,
-        });
-
-        if (response.status === 504) {
-          timedOut += batch.length;
-        }
-      }
-
-      const timeoutNote = timedOut > 0 ? ` (timeouts: ${timedOut})` : "";
-      setStatus(`Done: ${successes} / ${processed} generated${timeoutNote}.`, {
-        error: failures > 0,
+      const response = await fetch("/api/generate", {
+        method: "POST",
+        body: formData,
       });
+
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(data?.error || `Request failed (${response.status})`);
+      }
+
+      const pages = Array.isArray(data?.pages) ? data.pages : [];
+      if (!pages.length) {
+        throw new Error("Server returned no pages.");
+      }
+
+      previewBook.innerHTML = "";
+      pages.forEach((p) => {
+        const card = document.createElement("div");
+        card.className = "page-card";
+
+        const img = document.createElement("img");
+        img.src = `data:image/png;base64,${p.b64_png}`;
+        img.alt = `Page ${p.pageIndex}: ${p.role}`;
+        card.appendChild(img);
+
+        const meta = document.createElement("div");
+
+        const title = document.createElement("div");
+        title.className = "page-title";
+        title.textContent = `Page ${p.pageIndex}: ${p.role}`;
+        meta.appendChild(title);
+
+        const caption = document.createElement("p");
+        caption.className = "page-caption";
+        caption.textContent = p.caption || "";
+        meta.appendChild(caption);
+
+        card.appendChild(meta);
+        previewBook.appendChild(card);
+      });
+
+      setStatus("Preview ready.");
     } catch (err) {
       setStatus(err?.message || "Something went wrong.", { error: true });
     } finally {
-      generateButton.disabled = false;
-      generateButton.textContent = originalLabel;
+      generateBtn.disabled = false;
+      generateBtn.textContent = originalLabel;
     }
+  }
+
+  generateBtn?.addEventListener("click", () => {
+    generatePreview();
   });
+
+  renderPhotoGrid();
+  setSelectedTemplate(selectedTemplateId);
 });
-  
+
