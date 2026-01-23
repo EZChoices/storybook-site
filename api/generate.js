@@ -314,10 +314,12 @@ module.exports = async function handler(req, res) {
   const size = SUPPORTED_IMAGE_SIZES.has(requestedSize) ? requestedSize : "1024x1024";
   const timeoutMs = Number(process.env.OPENAI_REQUEST_TIMEOUT_MS || 0) || 0;
 
-  const rawConcurrency = Number(process.env.OPENAI_IMAGE_CONCURRENCY || 2);
-  const concurrency = Number.isFinite(rawConcurrency)
-    ? Math.max(1, Math.min(3, rawConcurrency))
-    : 2;
+  const defaultConcurrency = tasks.length;
+  const rawConcurrency = process.env.OPENAI_IMAGE_CONCURRENCY;
+  const requestedConcurrency = rawConcurrency ? Number(rawConcurrency) : defaultConcurrency;
+  const concurrency = Number.isFinite(requestedConcurrency)
+    ? Math.max(1, Math.min(tasks.length, requestedConcurrency))
+    : defaultConcurrency;
 
   const tasks = pages.map((page, idx) => ({
     page,
@@ -368,4 +370,3 @@ module.exports = async function handler(req, res) {
 
   json(res, 200, { templateId, style, pages: results });
 };
-
