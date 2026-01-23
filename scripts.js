@@ -1,5 +1,7 @@
 document.addEventListener("DOMContentLoaded", () => {
   const MAX_PHOTOS = 12;
+  const PREVIEW_PAGES = 6;
+  const BATCH_SIZE = 2;
 
   const templateList = document.getElementById("templateList");
   const photosInput = document.getElementById("photosInput");
@@ -68,6 +70,47 @@ document.addEventListener("DOMContentLoaded", () => {
     return api.getTemplate(templateId);
   }
 
+  function selectPhotoIndices(totalPhotos, needed) {
+    if (totalPhotos <= 0) return [];
+    if (totalPhotos >= needed) {
+      if (totalPhotos === needed) {
+        return Array.from({ length: needed }, (_, i) => i);
+      }
+
+      const lastIndex = totalPhotos - 1;
+      const denom = needed - 1;
+      return Array.from({ length: needed }, (_, i) =>
+        Math.round((i * lastIndex) / denom)
+      );
+    }
+
+    return Array.from({ length: needed }, (_, i) => i % totalPhotos);
+  }
+
+  async function readResponseJsonOrThrow(response) {
+    const text = await response.text();
+    let data = null;
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch {
+      data = null;
+    }
+
+    if (!response.ok) {
+      const message =
+        data?.error ||
+        (typeof text === "string" && text.trim() ? text.trim() : null) ||
+        `Request failed (${response.status})`;
+      throw new Error(message);
+    }
+
+    if (!data) {
+      throw new Error("Server returned an invalid response.");
+    }
+
+    return data;
+  }
+
   function setSelectedTemplate(templateId) {
     selectedTemplateId = templateId;
 
@@ -117,63 +160,87 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
+    const chosenIndices = selectPhotoIndices(selectedFiles.length, PREVIEW_PAGES);
+    const chosenFiles = chosenIndices.map((idx) => selectedFiles[idx]).filter(Boolean);
+    if (chosenFiles.length === 0) {
+      setStatus("Please upload at least 1 photo.", { error: true });
+      return;
+    }
+
     generateBtn.disabled = true;
     const originalLabel = generateBtn.textContent;
     generateBtn.textContent = "Generating…";
 
     try {
-      const formData = new FormData();
-      formData.append("templateId", selectedTemplateId);
-      formData.append("style", String(styleSelect?.value || "Watercolor"));
-      formData.append("childName", String(childNameInput?.value || "").trim());
-      formData.append("lang", String(langSelect?.value || "English"));
+      const style = String(styleSelect?.value || "Watercolor");
+      const childName = String(childNameInput?.value || "").trim();
+      const lang = String(langSelect?.value || "English");
 
-      for (const file of selectedFiles) {
-        formData.append("photos[]", file, file.name || "photo");
+      const pagesByIndex = new Map();
+
+      async function runBatch(pageStart, pageCount) {
+        const formData = new FormData();
+        formData.append("templateId", selectedTemplateId);
+        formData.append("style", style);
+        formData.append("childName", childName);
+        formData.append("lang", lang);
+        formData.append("pageStart", String(pageStart));
+        formData.append("pageCount", String(pageCount));
+
+        for (const file of chosenFiles) {
+          formData.append("photos[]", file, file.name || "photo");
+        }
+
+        const response = await fetch("/api/generate", { method: "POST", body: formData });
+        return await readResponseJsonOrThrow(response);
       }
 
-      setStatus("Generating 6 illustrated pages…");
+      function renderCurrent() {
+        previewBook.innerHTML = "";
+        const sorted = Array.from(pagesByIndex.values()).sort(
+          (a, b) => a.pageIndex - b.pageIndex
+        );
+        for (const p of sorted) {
+          const card = document.createElement("div");
+          card.className = "page-card";
 
-      const response = await fetch("/api/generate", {
-        method: "POST",
-        body: formData,
-      });
+          const img = document.createElement("img");
+          img.src = `data:image/png;base64,${p.b64_png}`;
+          img.alt = `Page ${p.pageIndex}: ${p.role}`;
+          card.appendChild(img);
 
-      const data = await response.json().catch(() => null);
-      if (!response.ok) {
-        throw new Error(data?.error || `Request failed (${response.status})`);
+          const meta = document.createElement("div");
+
+          const title = document.createElement("div");
+          title.className = "page-title";
+          title.textContent = `Page ${p.pageIndex}: ${p.role}`;
+          meta.appendChild(title);
+
+          const caption = document.createElement("p");
+          caption.className = "page-caption";
+          caption.textContent = p.caption || "";
+          meta.appendChild(caption);
+
+          card.appendChild(meta);
+          previewBook.appendChild(card);
+        }
       }
 
-      const pages = Array.isArray(data?.pages) ? data.pages : [];
-      if (!pages.length) {
-        throw new Error("Server returned no pages.");
+      for (let pageStart = 0; pageStart < PREVIEW_PAGES; pageStart += BATCH_SIZE) {
+        const pageCount = Math.min(BATCH_SIZE, PREVIEW_PAGES - pageStart);
+        setStatus(`Generating pages ${pageStart + 1}–${pageStart + pageCount} of ${PREVIEW_PAGES}…`);
+
+        const data = await runBatch(pageStart, pageCount);
+        const batchPages = Array.isArray(data?.pages) ? data.pages : [];
+        if (!batchPages.length) {
+          throw new Error("Server returned no pages.");
+        }
+
+        batchPages.forEach((p) => {
+          if (p?.pageIndex && p?.b64_png) pagesByIndex.set(p.pageIndex, p);
+        });
+        renderCurrent();
       }
-
-      previewBook.innerHTML = "";
-      pages.forEach((p) => {
-        const card = document.createElement("div");
-        card.className = "page-card";
-
-        const img = document.createElement("img");
-        img.src = `data:image/png;base64,${p.b64_png}`;
-        img.alt = `Page ${p.pageIndex}: ${p.role}`;
-        card.appendChild(img);
-
-        const meta = document.createElement("div");
-
-        const title = document.createElement("div");
-        title.className = "page-title";
-        title.textContent = `Page ${p.pageIndex}: ${p.role}`;
-        meta.appendChild(title);
-
-        const caption = document.createElement("p");
-        caption.className = "page-caption";
-        caption.textContent = p.caption || "";
-        meta.appendChild(caption);
-
-        card.appendChild(meta);
-        previewBook.appendChild(card);
-      });
 
       setStatus("Preview ready.");
     } catch (err) {
@@ -191,4 +258,3 @@ document.addEventListener("DOMContentLoaded", () => {
   renderPhotoGrid();
   setSelectedTemplate(selectedTemplateId);
 });
-

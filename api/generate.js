@@ -273,6 +273,8 @@ module.exports = async function handler(req, res) {
   const style = String(parsed.fields.style || "Watercolor").trim() || "Watercolor";
   const childName = String(parsed.fields.childName || "").trim();
   const lang = String(parsed.fields.lang || "English").trim() || "English";
+  const pageStartRaw = String(parsed.fields.pageStart || "").trim();
+  const pageCountRaw = String(parsed.fields.pageCount || "").trim();
 
   if (!templateId) {
     json(res, 400, { error: "Missing field: templateId" });
@@ -309,10 +311,35 @@ module.exports = async function handler(req, res) {
   const chosenIndices = selectPhotoIndices(limitedPhotos.length, STORY_PAGES);
   const chosenPhotos = chosenIndices.map((idx) => limitedPhotos[idx]);
 
+  const pageStart = pageStartRaw ? Number(pageStartRaw) : 0;
+  const pageCount = pageCountRaw ? Number(pageCountRaw) : STORY_PAGES;
+  if (!Number.isInteger(pageStart) || pageStart < 0 || pageStart >= STORY_PAGES) {
+    json(res, 400, { error: "Invalid field: pageStart" });
+    return;
+  }
+  if (!Number.isInteger(pageCount) || pageCount < 1 || pageCount > STORY_PAGES) {
+    json(res, 400, { error: "Invalid field: pageCount" });
+    return;
+  }
+  const endExclusive = Math.min(STORY_PAGES, pageStart + pageCount);
+  const requestedPageIndices = Array.from(
+    { length: endExclusive - pageStart },
+    (_, i) => pageStart + i + 1
+  );
+
   const model = String(process.env.OPENAI_IMAGE_MODEL || "gpt-image-1.5").trim();
   const requestedSize = String(process.env.OPENAI_IMAGE_SIZE || "1024x1024").trim();
   const size = SUPPORTED_IMAGE_SIZES.has(requestedSize) ? requestedSize : "1024x1024";
   const timeoutMs = Number(process.env.OPENAI_REQUEST_TIMEOUT_MS || 0) || 0;
+
+  const tasks = requestedPageIndices.map((pageIndex) => {
+    const idx = pageIndex - 1;
+    return {
+      page: pages[idx],
+      pageIndex,
+      file: chosenPhotos[idx],
+    };
+  });
 
   const defaultConcurrency = tasks.length;
   const rawConcurrency = process.env.OPENAI_IMAGE_CONCURRENCY;
@@ -320,12 +347,6 @@ module.exports = async function handler(req, res) {
   const concurrency = Number.isFinite(requestedConcurrency)
     ? Math.max(1, Math.min(tasks.length, requestedConcurrency))
     : defaultConcurrency;
-
-  const tasks = pages.map((page, idx) => ({
-    page,
-    pageIndex: idx + 1,
-    file: chosenPhotos[idx],
-  }));
 
   const results = await mapWithConcurrency(tasks, concurrency, async (task) => {
     const { pageIndex, page, file } = task;
@@ -368,5 +389,6 @@ module.exports = async function handler(req, res) {
     return;
   }
 
+  results.sort((a, b) => a.pageIndex - b.pageIndex);
   json(res, 200, { templateId, style, pages: results });
 };
